@@ -2,6 +2,8 @@ import 'package:CameraBot/ui/abstract_state.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:cross_file_image/cross_file_image.dart';
 
 enum PageMode { camera, photos, choose }
 
@@ -15,6 +17,7 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends AbstractState<MainPage> {
   late List<CameraDescription> cameras;
   late CameraController cameraController;
+  XFile? _file;
   int direction = 0;
   PageMode mode = PageMode.choose;
 
@@ -22,6 +25,11 @@ class _MainPageState extends AbstractState<MainPage> {
   void dispose() {
     cameraController.dispose();
     super.dispose();
+  }
+
+  Future<XFile?> _pickImage() async {
+    return ImagePicker().pickImage(source: ImageSource.gallery);
+    // .catchError((err) => null);
   }
 
   Future<void> startCamera(int direction) async {
@@ -49,16 +57,20 @@ class _MainPageState extends AbstractState<MainPage> {
           height: 20,
         ),
         Flexible(
-          child: FractionallySizedBox(
-              widthFactor: 0.8,
-              heightFactor: 0.9,
-              child: Container(
-                  decoration: const BoxDecoration(
-                      borderRadius:
-                          BorderRadius.all(Radius.circular(10))),
-                  child: CameraPreview(cameraController))),
+            child: FractionallySizedBox(
+                widthFactor: 0.8,
+                heightFactor: 0.9,
+                child: Container(
+                    decoration: const BoxDecoration(
+                        borderRadius: BorderRadius.all(Radius.circular(10))),
+                    child: _file == null
+                        ? CameraPreview(cameraController)
+                        : Image(
+                            image: XFileImage(_file!),
+                          )))),
+        const SizedBox(
+          height: 30,
         ),
-        const SizedBox(height: 30,),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -68,6 +80,9 @@ class _MainPageState extends AbstractState<MainPage> {
                   if (mounted) {
                     if (file != null) {
                       print("Picture saved to ${file.path}");
+                      setState(() {
+                        _file = file;
+                      });
                     }
                   }
                 });
@@ -75,11 +90,7 @@ class _MainPageState extends AbstractState<MainPage> {
               child: _buildButton(Icons.camera_alt_outlined),
             ),
             GestureDetector(
-              onTap: () {
-                setState(() {
-                  mode = PageMode.choose;
-                });
-              },
+              onTap: _switchToChooseMode,
               child: _buildButton(Icons.close),
             )
           ],
@@ -89,7 +100,55 @@ class _MainPageState extends AbstractState<MainPage> {
   }
 
   Widget _buildPhotosView() {
-    return Container(color: Colors.green);
+    return Align(
+      alignment: Alignment.topCenter,
+      child: Column(
+        children: [
+          const SizedBox(
+            height: 20,
+          ),
+          Flexible(
+            child: FractionallySizedBox(
+                widthFactor: 0.8,
+                heightFactor: 0.9,
+                child: Container(
+                    decoration: const BoxDecoration(
+                        borderRadius:
+                            BorderRadius.all(Radius.circular(10)),
+                    ),
+                    child: _file == null
+                        ? Center(
+                            child: SvgPicture.asset(
+                              'assets/images/logo.svg',
+                              theme: SvgTheme(
+                                  currentColor: theme.colorScheme.secondary),
+                              fit: BoxFit.contain,
+                            ),
+                          )
+                        : Image(
+                            image: XFileImage(_file!),
+                          ))),
+          ),
+          const SizedBox(
+            height: 30,
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              GestureDetector(
+                  onTap: _switchToChooseMode, child: _buildButton(Icons.close)),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  void _switchToChooseMode() {
+    setState(() {
+      _file = null;
+      mode = PageMode.choose;
+    });
   }
 
   Widget _buildChooseView() {
@@ -136,9 +195,14 @@ class _MainPageState extends AbstractState<MainPage> {
               GestureDetector(
                 child: _buildButton(Icons.folder),
                 onTap: () async {
-                  setState(() {
-                    mode = PageMode.photos;
-                  });
+                  final image = await _pickImage();
+                  print(image?.path);
+                  if (image != null) {
+                    setState(() {
+                      _file = image;
+                      mode = PageMode.photos;
+                    });
+                  }
                 },
               ),
             ],

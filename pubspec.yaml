@@ -16,6 +16,8 @@ dependencies:
   flutter_svg: ^2.0.9
   camera: ^0.10.5+5
   flutter_plugin_android_lifecycle: ^2.0.17
+  image_picker: ^1.0.4
+  cross_file_image: ^1.1.0
 
 dev_dependencies:
   flutter_test:
