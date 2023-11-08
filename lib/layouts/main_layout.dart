@@ -39,10 +39,11 @@ class _MainLayoutState extends AbstractState<MainLayout> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                const SizedBox(height: 30,),
                 Text(
                   'Camera bot',
                   style: TextStyle(
-                    fontSize: 55,
+                    fontSize: 30,
                   ),
                   textAlign: TextAlign.center,
                 ),
