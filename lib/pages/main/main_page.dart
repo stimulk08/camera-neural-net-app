@@ -1,7 +1,10 @@
+import 'package:CameraBot/core/pytorch_service.dart';
+import 'package:CameraBot/styles.dart';
 import 'package:CameraBot/ui/abstract_state.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cross_file_image/cross_file_image.dart';
 
@@ -17,7 +20,10 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends AbstractState<MainPage> {
   late List<CameraDescription> cameras;
   late CameraController cameraController;
+  final PytorchService _pytorch = Get.find<PytorchService>();
+
   XFile? _file;
+  String? _prediction;
   int direction = 0;
   PageMode mode = PageMode.choose;
 
@@ -33,11 +39,22 @@ class _MainPageState extends AbstractState<MainPage> {
   }
 
   Future<void> startCamera(int direction) async {
-    cameras = await availableCameras();
+    try {
+      cameras = await availableCameras();
+    } on CameraException catch (e) {
+      if (e.description == 'No camera found for the given camera options.') {
+        Get.showSnackbar(const GetSnackBar(
+          title: 'Камера не найдена',
+          message: 'Подключите камеру и попробуйте снова',
+          duration: Duration(seconds: 3),
+        ));
+      }
+    }
     cameraController = CameraController(
       cameras[direction],
       ResolutionPreset.high,
       enableAudio: false,
+
     );
 
     await cameraController.initialize().then((value) {
@@ -71,27 +88,52 @@ class _MainPageState extends AbstractState<MainPage> {
         const SizedBox(
           height: 30,
         ),
+        Visibility(
+            visible: _prediction != null,
+            child: Column(
+              children: [
+                Text("It`s $_prediction", style: headerStyle.copyWith(fontSize: 18),),
+                const SizedBox(height: 10,)
+              ],
+            )
+        ),
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Visibility(
+              visible: _file == null,
+              child: GestureDetector(
+                onTap: () {
+                  cameraController.takePicture().then((XFile? file) {
+                    if (mounted) {
+                      if (file != null) {
+                        print("Picture saved to ${file.path}");
+                        setState(() {
+                          _file = file;
+                        });
+                      }
+                    }
+                  });
+                },
+                child: _buildButton(const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.black54,
+                )),
+              ),
+            ),
+            Visibility(visible: _file != null, child: _buildAnalizeButton()),
             GestureDetector(
               onTap: () {
-                cameraController.takePicture().then((XFile? file) {
-                  if (mounted) {
-                    if (file != null) {
-                      print("Picture saved to ${file.path}");
-                      setState(() {
-                        _file = file;
-                      });
-                    }
-                  }
+                if (_file == null) return _switchToChooseMode();
+                setState(() {
+                  _file = null;
+                  _prediction = null;
                 });
               },
-              child: _buildButton(Icons.camera_alt_outlined),
-            ),
-            GestureDetector(
-              onTap: _switchToChooseMode,
-              child: _buildButton(Icons.close),
+              child: _buildButton(const Icon(
+                Icons.close,
+                color: Colors.black54,
+              )),
             )
           ],
         ),
@@ -113,8 +155,7 @@ class _MainPageState extends AbstractState<MainPage> {
                 heightFactor: 0.9,
                 child: Container(
                     decoration: const BoxDecoration(
-                        borderRadius:
-                            BorderRadius.all(Radius.circular(10)),
+                      borderRadius: BorderRadius.all(Radius.circular(10)),
                     ),
                     child: _file == null
                         ? Center(
@@ -132,11 +173,25 @@ class _MainPageState extends AbstractState<MainPage> {
           const SizedBox(
             height: 30,
           ),
+          Visibility(
+              visible: _prediction != null,
+              child: Column(
+                children: [
+                  Text("It`s $_prediction", style: headerStyle.copyWith(fontSize: 18),),
+                  const SizedBox(height: 10,)
+                ],
+              )
+          ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              _buildAnalizeButton(),
               GestureDetector(
-                  onTap: _switchToChooseMode, child: _buildButton(Icons.close)),
+                  onTap: _switchToChooseMode,
+                  child: _buildButton(const Icon(
+                    Icons.close,
+                    color: Colors.black54,
+                  ))),
             ],
           )
         ],
@@ -147,6 +202,7 @@ class _MainPageState extends AbstractState<MainPage> {
   void _switchToChooseMode() {
     setState(() {
       _file = null;
+      _prediction = null;
       mode = PageMode.choose;
     });
   }
@@ -184,7 +240,10 @@ class _MainPageState extends AbstractState<MainPage> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               GestureDetector(
-                child: _buildButton(Icons.camera_alt_outlined),
+                child: _buildButton(const Icon(
+                  Icons.camera_alt_outlined,
+                  color: Colors.black54,
+                )),
                 onTap: () async {
                   await startCamera(0);
                   setState(() {
@@ -193,7 +252,10 @@ class _MainPageState extends AbstractState<MainPage> {
                 },
               ),
               GestureDetector(
-                child: _buildButton(Icons.folder),
+                child: _buildButton(const Icon(
+                  Icons.folder,
+                  color: Colors.black54,
+                )),
                 onTap: () async {
                   final image = await _pickImage();
                   print(image?.path);
@@ -219,7 +281,23 @@ class _MainPageState extends AbstractState<MainPage> {
     return _buildChooseView();
   }
 
-  Widget _buildButton(IconData icon) {
+  Widget _buildAnalizeButton() {
+    return GestureDetector(
+      onTap: () async {
+        print("ANALIZING");
+        final result = await _pytorch.getImagePrediction(await _file!.readAsBytes());
+        setState(() {
+          _prediction = result;
+        });
+      },
+      child: _buildButton(Padding(
+        padding: const EdgeInsets.all(5),
+        child: SvgPicture.asset("assets/images/logo.svg"),
+      )),
+    );
+  }
+
+  Widget _buildButton(Widget icon) {
     return Container(
       margin: const EdgeInsets.only(
         left: 20,
@@ -239,10 +317,7 @@ class _MainPageState extends AbstractState<MainPage> {
         ],
       ),
       child: Center(
-        child: Icon(
-          icon,
-          color: Colors.black54,
-        ),
+        child: icon,
       ),
     );
   }
