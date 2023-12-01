@@ -1,4 +1,6 @@
 import 'package:CameraBot/core/app_bindings.dart';
+import 'package:CameraBot/core/config.dart';
+import 'package:CameraBot/core/pytorch_service.dart';
 import 'package:CameraBot/layouts/main_layout.dart';
 import 'package:CameraBot/pages/main/main_page.dart';
 import 'package:CameraBot/styles.dart';
@@ -20,6 +22,8 @@ class _SplashScreenState extends AbstractState<SplashScreen> {
 
   Future<void> initServices() async {
     await AppBindings().dependencies();
+    final pytorchService = Get.find<PytorchService>();
+    await pytorchService.initImageModel("assets/models/$modelFileName", "assets/labels/$labelFileName");
     await Future.delayed(const Duration(seconds: 5), () => print(123));
   }
 
