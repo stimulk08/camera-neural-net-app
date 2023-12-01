@@ -1,16 +1,15 @@
-# my_app
+## Установка
+https://www.youtube.com/watch?v=c7jWWkjoKsw
+## Инструкция добавления модели
+ - Добавляем файл в _/assets/models/_
+ - Задаем название файла модели без расширения в _/libs/core/config.dart_ **labelFileName**='my-best-model'
+ - Если нужно изменить набор лейблов то добавляем файл в _/assets/labels/_ и также в конфиге задаем название файла в переменную **labelFileName**
 
-A new Flutter project.
+## Инструкции по запуску
+ - Запускается только на мобильных устройствах
+ - Протестировать можно через [эмулятор](https://www.youtube.com/watch?v=q-3r85fl-g4), либо физическое устройство
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Тест через телефон
+ -  [Нужно телефон перевести в режим разработчика](url)
+ - Подключить по кабелю к компьютеру телефон
+ - Должно появиться в выборе устройств телефон
